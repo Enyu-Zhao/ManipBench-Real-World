@@ -370,11 +370,11 @@ class URRobot(object):
         tjoints = [round(i, self.max_float_length) for i in tjoints]
         tjoints.append(acc)
         tjoints.append(vel)
-        # tjoints.append(t)
+        tjoints.append(t)
         # tjoints.append(lookahead_time)
         # tjoints.append(gain)
         # return "{}({}[{},{},{},{},{},{}], a={}, v={}, t={}, lookahead_time={}, gain={})".format(command, prefix, *tjoints)
-        return "{}({}[{},{},{},{},{},{}], a={}, v={})".format(command, prefix, *tjoints)
+        return "{}({}[{},{},{},{},{},{}], {}, {}, {})".format(command, prefix, *tjoints)
 
     def _format_move(self, command, tpose, acc, vel, radius=0, prefix=""):
         tpose = [round(i, self.max_float_length) for i in tpose]
