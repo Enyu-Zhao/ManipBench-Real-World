@@ -171,7 +171,7 @@ class Robotiq_Two_Finger_Gripper(object):
         urscript._set_analog_inputrange(3, 0)
         urscript._set_analog_outputdomain(0, 0)
         urscript._set_analog_outputdomain(1, 0)
-        urscript._set_tool_voltage(0)
+        urscript._set_tool_voltage(24)
         urscript._set_runstate_outputs()
 
         # Set payload, speed and force
