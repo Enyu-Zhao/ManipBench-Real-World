@@ -64,6 +64,11 @@ if __name__ == '__main__':
                 robot.set_digital_out(8, True)
                 robot.set_digital_out(9, False)
                 time.sleep(0.05)
+            # print digital outs
+            dout0 = robot.get_digital_out(8)
+            dout1 = robot.get_digital_out(9)
+            print(f'Dout0 {dout0} Dout1 {dout1}')
+            breakpoint()
         except ValueError:  # Handle the error if the input is not an integer
             print("Please enter a valid number.")
     print('Done!')
