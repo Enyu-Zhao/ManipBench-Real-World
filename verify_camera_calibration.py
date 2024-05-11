@@ -174,6 +174,7 @@ def move_robot_to_last_picked_point(camera_point):
     # very good! all values are fairly closed.
     # Only off by a few centimeters when I used the coordinates to move the robot arm
 
+    ############## Method 1: use translation and rotation_quat ############## 
     # (w, x, y, z)
     rotation_quat = Quaternion(rotation_quat[-1], rotation_quat[0], rotation_quat[1], rotation_quat[2])
     camera_to_robot_base_trans_matrix = rotation_quat.transformation_matrix
@@ -184,14 +185,25 @@ def move_robot_to_last_picked_point(camera_point):
     camera_to_robot_base_trans_matrix[1][-1] = translation[1]
     camera_to_robot_base_trans_matrix[2][-1] = translation[2]
 
+    ############## Method 2: use the transformation matrix directly ############## 
+    # camera_to_robot_base_trans_matrix = np.array([
+    #     [0.990668, -0.0666395,   0.118892,   0.582191],
+    #     [-0.13553,  -0.389404,   0.911041,  -0.576265],
+    #     [-0.0144143,  -0.918653,  -0.394802,     0.3589],
+    #     [        0,          0,          0,          1]
+    # ])
+
     # append 1 to point: [x, y, z, 1]
     camera_point = [camera_point[0], camera_point[1], camera_point[2], 1]
+
+    robot_tcp_pos = robot.getl()[:3]
+    print('Robot tcp postion: ', robot_tcp_pos)
 
     cam_to_base_to_tcp_point = np.matmul(camera_to_robot_base_trans_matrix, camera_point)
     print('cam_to_base_to_tcp_point: ', cam_to_base_to_tcp_point)
 
     # use current robot's z coordinate to avoid collision with the table.
-    robot_tcp = np.array(robot.getl()[:3])
+    robot_tcp = np.array(robot_tcp_pos)
     cam_to_base_to_tcp_point[2] = robot_tcp[2]
     print('Final camera-to-base-to-tcp point: ', cam_to_base_to_tcp_point)
     delta_movement_based_on_tcp = cam_to_base_to_tcp_point[:3] - robot_tcp
