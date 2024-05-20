@@ -52,6 +52,7 @@ def print_tool_tip_pos_orientation(robot):
     converted_tip_orientation = tip_orientation.new_from_euler(converted_euler, 'ZYX')
     # note that tip_orientation and converted_tip_orientation should be exactly the same
     print(f'Tool tip position: {tip_pos}, orientation: {tip_orientation}')
+    print('Getl: ', robot.getl())
 
 if __name__ == '__main__':
     robot = urx_local.Robot("192.10.0.11")
