@@ -174,6 +174,7 @@ def move_robot_to_last_picked_point(camera_point):
     breakpoint() # Pause before executing
     robot.translate((delta_movement_based_on_tcp[0], delta_movement_based_on_tcp[1], delta_movement_based_on_tcp[2]), acceleration, velocity)
     print('Done!!')
+    exit(0)
 
 if __name__ == '__main__':
     rgb, depth, intrinsics, depth_scale = capture_rgb_and_depth_from_realsense()
