@@ -127,48 +127,9 @@ def move_robot_to_last_picked_point(camera_point):
     acceleration = 0.2
     velocity = 0.05
     
-    # Experiment 1:
-    # # x y z    
-    # translation = [0.38625, -0.42114, 0.51823]
-    # # (x, y, z, w)
-    # rotation_quat = [-0.41108, 0.6542, 0.51776, 0.36736]
-
-    # Experiment 2:
-    # after getting a bigger marker and set the appropriate marker size
-    # 0.57211; -0.83268; 0.81784
-    # -0.79679; 0.088439; 0.045675; 0.596
-    # x y z    
-    translation = [0.57211, -0.83268, 0.81784]
-    # (x, y, z, w)
-    rotation_quat = [-0.79679, 0.088439, 0.045675, 0.596]
-    # base_frame_point:  [0.29150145 0.9604321  0.78064085 1.        ]
-    # Tool tip position: <PosVec: (0.36903, -0.11269, 0.79948)>, orientation: <Orientation: RV(1.406, 1.100, -0.320)>
-    # thoughts: z is very accurate. x is alright. But y is wrong.
-
-    # Experiment 3:
-    # change object frame to tool0_control
-    # this is definitely wrong. camera optical frame are handeye target are both not updated.
-
-    # Experiment 4:
-    # change end-effector frame to ee_link
-    # 0.60096; -0.9817; 1.0593
-    # -0.8365; -0.055683; -0.082776; 0.5388
-    # x y z    
-    translation = [0.60096, -0.9817, 1.0593]
-    # (x, y, z, w)
-    rotation_quat = [-0.8365, -0.055683, -0.082776, 0.5388]
-    # base_frame_point:  [ 0.64720714 -0.29296049  0.70883403  1.        ]
-    # Tool tip position: <PosVec: (0.59371, -0.15363, 0.61411)>, orientation: <Orientation: RV(1.153, 0.532, -0.276)>
-    # thoughts: yes, this looks much better, even y-axis looks correct now.
-
-    # Experiment 5:
-    # moved camera to a new position
-    # 1.3562; 0.50264; 0.80685
-    # 0.48791; 0.75911; -0.40608; -0.14419
-    # x y z    
-    translation = [1.3562, 0.50264, 0.80685]
-    # (x, y, z, w)
-    rotation_quat = [0.48791, 0.75911, -0.40608, -0.14419]
+    # 2024-05-19-left arm calibration - working! Error: 0.02m
+    translation = [0.58283, -0.43109, 0.38223] # x y z
+    rotation_quat = [-0.78214, 0.002526, -0.026495, 0.62254] # (x, y, z, w)
     # base_frame_point:  [ 0.70719903 -0.04652518  0.37184902  1.        ]
     # Tool tip position: <PosVec: (0.64552, -0.08997, 0.35418)>, orientation: <Orientation: RV(-0.221, 0.543, 0.758)>
     # very good! all values are fairly closed.
