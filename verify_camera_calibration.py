@@ -123,17 +123,22 @@ def visualize_point_cloud(rgb, depth, intrinsics, depth_scale):
     return last_picked_point
 
 def move_robot_to_last_picked_point(camera_point):
-    robot = urx_local.Robot("192.10.0.11")
     acceleration = 0.2
     velocity = 0.05
     
+    # uncomment these to control the left robot arm
+    # robot = urx_local.Robot("192.10.0.11") # left robot arm
     # 2024-05-19-left arm calibration - working! Error: 0.02m
-    translation = [0.58283, -0.43109, 0.38223] # x y z
-    rotation_quat = [-0.78214, 0.002526, -0.026495, 0.62254] # (x, y, z, w)
-    # base_frame_point:  [ 0.70719903 -0.04652518  0.37184902  1.        ]
-    # Tool tip position: <PosVec: (0.64552, -0.08997, 0.35418)>, orientation: <Orientation: RV(-0.221, 0.543, 0.758)>
-    # very good! all values are fairly closed.
-    # Only off by a few centimeters when I used the coordinates to move the robot arm
+    # translation = [0.58283, -0.43109, 0.38223] # x y z
+    # rotation_quat = [-0.78214, 0.002526, -0.026495, 0.62254] # (x, y, z, w)
+
+
+    # uncomment these to control the right robot arm
+    robot = urx_local.Robot("192.10.0.12") # right robot arm
+    # 2024-05-19-right arm calibration - working! Error: 0.01m
+    translation = [-0.59395, -0.45145, 0.36734] # x y z
+    rotation_quat = [-0.78236, -0.017843, -0.0012235, 0.62257] # (x, y, z, w)
+
 
     ############## Method 1: use translation and rotation_quat ############## 
     # (w, x, y, z)
