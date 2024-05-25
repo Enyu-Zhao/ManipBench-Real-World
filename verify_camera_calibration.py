@@ -127,17 +127,16 @@ def move_robot_to_last_picked_point(camera_point):
     velocity = 0.05
     
     # uncomment these to control the left robot arm
-    # robot = urx_local.Robot("192.10.0.11") # left robot arm
-    # 2024-05-19-left arm calibration - working! Error: 0.02m
-    # translation = [0.58283, -0.43109, 0.38223] # x y z
-    # rotation_quat = [-0.78214, 0.002526, -0.026495, 0.62254] # (x, y, z, w)
-
+    robot = urx_local.Robot("192.10.0.11") # left robot arm
+    # 0520 left arm calibration: Error: 0.0219506 m, 0.0114581 rad
+    translation = [0.59186, -0.42389, 0.37859] # x y z
+    rotation_quat = [-0.77893, -0.0039328, -0.025802, 0.62657] # (x, y, z, w)
 
     # uncomment these to control the right robot arm
-    robot = urx_local.Robot("192.10.0.12") # right robot arm
-    # 2024-05-19-right arm calibration - working! Error: 0.01m
-    translation = [-0.59395, -0.45145, 0.36734] # x y z
-    rotation_quat = [-0.78236, -0.017843, -0.0012235, 0.62257] # (x, y, z, w)
+    # robot = urx_local.Robot("192.10.0.12") # right robot arm
+    # # 2024-05-19-right arm calibration - working! Error: 0.01m
+    # translation = [-0.59395, -0.45145, 0.36734] # x y z
+    # rotation_quat = [-0.78236, -0.017843, -0.0012235, 0.62257] # (x, y, z, w)
 
 
     ############## Method 1: use translation and rotation_quat ############## 
