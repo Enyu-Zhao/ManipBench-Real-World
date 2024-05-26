@@ -21,8 +21,8 @@ from urx import Robot
 import time
 
 if __name__ == '__main__':
-    # robot_ip = "192.10.0.11" # left arm
-    robot_ip = "192.10.0.12" # right arm
+    robot_ip = "192.10.0.11" # left arm
+    # robot_ip = "192.10.0.12" # right arm
     robot = Robot(robot_ip)
     print('Robot pose: ', robot.get_pose())
     print('Sending activation sequence...')
@@ -69,7 +69,6 @@ if __name__ == '__main__':
             dout0 = robot.get_digital_out(8)
             dout1 = robot.get_digital_out(9)
             print(f'Dout0 {dout0} Dout1 {dout1}')
-            breakpoint()
         except ValueError:  # Handle the error if the input is not an integer
             print("Please enter a valid number.")
     print('Done!')
