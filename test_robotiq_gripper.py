@@ -62,8 +62,13 @@ if __name__ == '__main__':
             else:
                 # close gripper
                 print('close gripper')
+                # 50%
+                # robot.set_digital_out(8, True)
+                # robot.set_digital_out(9, False)
+
+                # 100%
                 robot.set_digital_out(8, True)
-                robot.set_digital_out(9, False)
+                robot.set_digital_out(9, True)
                 time.sleep(0.05)
             # print digital outs
             dout0 = robot.get_digital_out(8)
