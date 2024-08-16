@@ -1,4 +1,7 @@
-Control UR5 using `urx`. More examples: https://github.com/SintefManufacturing/python-urx.
+CB2 UR5s Setup Instructions: https://i-chun-arthur.notion.site/CB2-UR5-Manual-eb8bd315645e422bb441105c421b8e22
+
+The scripts control the UR5s using the [python-urx](https://github.com/SintefManufacturing/python-urx) library. 
+* More examples: https://github.com/SintefManufacturing/python-urx.
 * A local version of `urx` is used because there's a formatting issue with `tpose`.
 
 **`test_robotiq_gripper.py`**
