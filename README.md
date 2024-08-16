@@ -1,5 +1,5 @@
 Control UR5 using `urx`. More examples: https://github.com/SintefManufacturing/python-urx.
-* We use a local version of `urx` because there's formatting issue with `tpose`.
+* A local version of `urx` is used because there's a formatting issue with `tpose`.
 
 **`test_robotiq_gripper.py`**
 
