@@ -27,3 +27,7 @@ The scripts control the UR5s using the [python-urx](https://github.com/SintefMan
 **`servoj_example.py`**
 
 - Example code that moves the robot arm using joint-space control.
+
+**`simultaneous_motion.py`**
+
+- Example code that executes both arms simultaneously.
