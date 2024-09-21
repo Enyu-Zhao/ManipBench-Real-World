@@ -21,27 +21,54 @@ from urx import Robot
 import time
 
 if __name__ == '__main__':
-    robot_ip = "192.10.0.11" # left arm
-    # robot_ip = "192.10.0.12" # right arm
+    # robot_ip = "192.10.0.11" # left arm
+    robot_ip = "192.10.0.12" # right arm
     robot = Robot(robot_ip)
     print('Robot pose: ', robot.get_pose())
+
     print('Sending activation sequence...')
     robot.set_tool_voltage(24)
     robot.set_digital_out(8, False)
     robot.set_digital_out(9, False)
     time.sleep(0.05)
 
+    # print digital outs
+    dout0 = robot.get_digital_out(8)
+    dout1 = robot.get_digital_out(9)
+    print(f'Gripper open: Dout0 {dout0} Dout1 {dout1}')
+
     robot.set_digital_out(8, True)
     time.sleep(0.05)
+
+    # print digital outs
+    dout0 = robot.get_digital_out(8)
+    dout1 = robot.get_digital_out(9)
+    print(f'Gripper close: Dout0 {dout0} Dout1 {dout1}')
 
     robot.set_digital_out(8, False)
     time.sleep(0.05)
 
+    # print digital outs
+    dout0 = robot.get_digital_out(8)
+    dout1 = robot.get_digital_out(9)
+    print(f'Gripper open: Dout0 {dout0} Dout1 {dout1}')
+
     robot.set_digital_out(9, True)
     time.sleep(0.05)
 
+    # print digital outs
+    dout0 = robot.get_digital_out(8)
+    dout1 = robot.get_digital_out(9)
+    print(f'Gripper close: Dout0 {dout0} Dout1 {dout1}')
+
     robot.set_digital_out(9, False)
     time.sleep(0.05)
+
+    # print digital outs
+    dout0 = robot.get_digital_out(8)
+    dout1 = robot.get_digital_out(9)
+    print(f'Gripper open: Dout0 {dout0} Dout1 {dout1}')
+
     print('Finish sending the activation sequence.')
 
     # waiting for user's input
@@ -63,12 +90,14 @@ if __name__ == '__main__':
                 # close gripper
                 print('close gripper')
                 # 50%
-                robot.set_digital_out(8, True)
-                robot.set_digital_out(9, False)
-
-                # 100%
+                # IMP: Use this for the left gripper
                 # robot.set_digital_out(8, True)
                 # robot.set_digital_out(9, True)
+
+                # 100%
+                # IMP: Use this for the right gripper
+                robot.set_digital_out(8, True)
+                robot.set_digital_out(9, True)
                 time.sleep(0.05)
             # print digital outs
             dout0 = robot.get_digital_out(8)

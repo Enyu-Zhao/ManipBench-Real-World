@@ -49,7 +49,7 @@ def move_robot_to_last_picked_point(camera_point, camera_destination, robot, arm
         # left robot arm
         translation = [0.55266, 0.065468, 0.825] # x y z
         rotation_quat = [0.73081, -0.68209, -0.00063677, -0.02574] # (x, y, z, w)
-        camera_destination[2] = camera_destination[2] - 0.1
+        camera_destination[2] = camera_destination[2] - 0.3
     
     else:
         # uncomment these to control the right robot arm

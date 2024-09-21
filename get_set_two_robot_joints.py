@@ -17,15 +17,24 @@ if __name__ == '__main__':
 
     for i in range(100):
         robot_left.servoj(
-            starting_robot_joints_left, vel=0.1, acc=0.3, t=0.35, lookahead_time=0.2, gain=100, wait=False
+            starting_robot_joints_left, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
         )
     time.sleep(1)
     print('Finished moving the left arm to starting states.')
 
     for i in range(100):
         robot_right.servoj(
-            starting_robot_joints_right, vel=0.1, acc=0.3, t=0.35, lookahead_time=0.2, gain=100, wait=False
+            starting_robot_joints_right, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
         )
     time.sleep(1)
     print('Finished moving the right arm to starting states.')
+
+    joints_left = robot_left.getj()
+    print('Left robot joints: ', joints_left)
+    time.sleep(1)
+
+    robot_right = urx.Robot("192.10.0.12")
+    joints_right = robot_right.getj()
+    print('Right robot joints: ', joints_right)
+
     print('Done')
