@@ -150,12 +150,14 @@ def move_robot_to_last_picked_point(camera_point):
     camera_to_robot_base_trans_matrix[2][-1] = translation[2]
 
     ############## Method 2: use the transformation matrix directly ############## 
-    # camera_to_robot_base_trans_matrix = np.array([
-    #     [0.990668, -0.0666395,   0.118892,   0.582191],
-    #     [-0.13553,  -0.389404,   0.911041,  -0.576265],
-    #     [-0.0144143,  -0.918653,  -0.394802,     0.3589],
-    #     [        0,          0,          0,          1]
-    # ])
+    camera_to_robot_base_trans_matrix = np.array([
+        [0.111036,   -0.993804,  0.00502952,   -0.752731],
+        [-0.993102,   -0.110763,   0.0384798,    0.078505],
+        [-0.0376843, -0.00926746,   -0.999247,    0.844486],
+        [        0,          0,          0,          1]
+    ])
+
+
 
     # append 1 to point: [x, y, z, 1]
     camera_point = [camera_point[0], camera_point[1], camera_point[2], 1]
@@ -174,7 +176,7 @@ def move_robot_to_last_picked_point(camera_point):
     print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp)
 
     print('Check everything before executing on the robot!!!')
-    breakpoint() # Pause before executing
+    # breakpoint() # Pause before executing
     robot.translate((delta_movement_based_on_tcp[0], delta_movement_based_on_tcp[1], delta_movement_based_on_tcp[2]), acceleration, velocity)
     print('Done!!')
     exit(0)
