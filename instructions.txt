@@ -1,0 +1,16 @@
+Important Pointers
+
+- Use the conda environment ros_noetic. Make sure that the python and pip are being referred to that (use "which python3" and "which pip3")
+- For running the RViz camera calibration run these scripts in different terminals
+1) roslaunch ur5_moveit_config robot_realsense.launch robot_ip:=192.10.0.12
+The above command launches the configuration for the right arm. Use the IP address of 192.10.0.11 for the left arm
+2) roslaunch ur5_moveit_config moveit_rviz.launch config:=true
+The above command will launch the RViz UI for the calibration.
+
+Save a solved matrix like the below from the terminal for the RViz UI upon clicking "solve"
+[ INFO] [1726630553.755482160]: Publish camera transformation
+  0.119692  -0.992361  0.0298741  -0.719766
+ -0.992505  -0.118854  0.0284246  0.0514971
+-0.0246568 -0.0330524  -0.999149   0.852853
+         0          0          0          1
+
