@@ -5,3 +5,6 @@
 *.ipynb_checkpoints
 *.mypy_cache
 *.pyc
+pick_place_task_1
+ssh_config.json
+/tasks
