@@ -40,6 +40,27 @@ def transfer_file(ssh_client, local_file_path, remote_path):
 
 
 
+# Function to check if a directory exists on the remote server
+def check_remote_directory_exists(ssh_client, remote_directory_path):
+    """Check if a directory exists on the remote server."""
+    stdin, stdout, stderr = ssh_client.exec_command(f'test -d {remote_directory_path} && echo "exists" || echo "not exists"')
+    result = stdout.read().decode().strip()
+    return result == "exists"
+
+# Function to create a directory on the remote server if it doesn't exist
+def create_remote_directory(ssh_client, remote_directory_path):
+    """Create a directory on the remote server if it doesn't already exist."""
+    if check_remote_directory_exists(ssh_client, remote_directory_path):
+        print(f"Directory {remote_directory_path} already exists.")
+    else:
+        stdin, stdout, stderr = ssh_client.exec_command(f'mkdir -p {remote_directory_path}')
+        exit_status = stdout.channel.recv_exit_status()  # Wait for command to finish
+        if exit_status == 0:
+            print(f"Directory {remote_directory_path} created successfully.")
+        else:
+            print(f"Error creating directory: {stderr.read().decode()}")
+
+
 
 if __name__ == "__main__":
 

@@ -62,6 +62,7 @@ def capture_image_from_depth_camera(save_folder,save_all=True):
             frames = pipeline.wait_for_frames()
 
             depth_frame = frames.get_depth_frame()
+            depth_intrinsics = depth_frame.profile.as_video_stream_profile().intrinsics
             color_frame = frames.get_color_frame()
             if not depth_frame or not color_frame:
                 continue
@@ -117,7 +118,7 @@ def capture_image_from_depth_camera(save_folder,save_all=True):
         pipeline.stop()
 
     if save_all:
-        return color_image_path, depth_image_path, combined_image_path
+        return color_image_path, depth_image_path, combined_image_path, raw_depth_image_path, depth_intrinsics
     else:
         return combined_image_path
     
