@@ -7,6 +7,8 @@ import time
 from ssh_transfer import transfer_file,create_remote_directory,create_ssh_client_with_cfg_file
 from image_capture import capture_image_from_depth_camera
 import json
+import urx
+import argparse
 
 TABLE_HEIGHT=0.862
 
@@ -20,7 +22,7 @@ def pixel_to_3D(x,y,depth_value,intrinsics):
     Y=(y-cy)*depth_value/fy
     Z=depth_value
 
-    return X,Y,Z
+    return [X,Y,Z]
 
 
 
@@ -38,8 +40,29 @@ class MOKAPipelineExe():
         self.local_task_folder = local_task_folder
         self.local_own_folder = os.path.join(local_task_folder, f"{model_name}_V{version}")
 
+        self.task_description_path=os.path.join(self.local_task_folder,"task_description.txt")
+        if not os.path.exists(self.local_task_folder):
+            os.makedirs(self.local_task_folder)
+            # task_description=input("Please input the task description:")
+            # with open(self.task_description_path,"w") as f:
+            #     f.write(task_description)
+
+        if not os.path.exists(self.local_own_folder):
+            os.makedirs(self.local_own_folder)
+
         self.remote_task_folder = remote_task_folder
         self.remote_own_folder = os.path.join(remote_task_folder, f"{model_name}_V{version}")
+
+        self.info_path=os.path.join(self.local_own_folder,"info.json")
+        self.info_to_pass={}
+
+        self.info_to_pass["model_name"]=model_name
+        self.info_to_pass["version"]=version
+        self.info_to_pass["remote_task_folder"]=os.path.abspath(self.local_task_folder)
+        self.info_to_pass["remote_own_folder"]=os.path.abspath(self.local_own_folder)
+        self.info_to_pass["task_folder"]=self.remote_task_folder
+        self.info_to_pass["own_folder"]=self.remote_own_folder
+
 
 
         self.table_height=TABLE_HEIGHT
@@ -47,18 +70,42 @@ class MOKAPipelineExe():
         self.moving_height=self.table_height-moving_height
         self.place_height=self.table_height-place_height
 
+        self.robot_url="192.10.0.12"
+        self.robot=urx_local.Robot(self.robot_url)
+        self.default_joints_pos=[-0.12412961030884695, -2.144660585057312, 1.5816871877202257, -0.9976501117431009, 4.716753443560367, 1.57439925225723]
 
-        robot = urx_local.Robot("192.10.0.12")
-        self.robot=robot
+        self.robot_move_to_default()
+        os.system("python test_robotiq_gripper.py")
 
-    def pre_execution(self):
+    def robot_move_to_default(self):
+        returning_robot=urx.Robot(self.robot_url)
+        for i in range(100):
+            returning_robot.servoj(
+                self.default_joints_pos, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
+            )
+        time.sleep(1)
+        print('Finished moving the right arm to starting states.')
+
+
+    def pre_execution(self,remote_pwd_path):
         color_image_path,_,_,raw_depth_array_path,self.intrisics=capture_image_from_depth_camera(self.local_own_folder)
 
+ 
         ssh_client=create_ssh_client_with_cfg_file("ssh_config.json")
-
+        create_remote_directory(ssh_client,self.remote_task_folder)
         create_remote_directory(ssh_client,self.remote_own_folder)
         
+
         transfer_file(ssh_client,color_image_path,os.path.join(self.remote_own_folder,"raw_image.png"))
+
+        self.info_to_pass["image_path"]=os.path.join(self.remote_own_folder,"raw_image.png")
+
+        self.info_to_pass["task_description_path"]=os.path.join(self.remote_task_folder,"task_description.txt")
+
+        with open(self.info_path,"w") as f:
+            json.dump(self.info_to_pass,f,indent=4)
+
+        transfer_file(ssh_client,self.info_path,os.path.join(remote_pwd_path,"info.json"))
 
 
         print("finish pre_execution, transfered image to server, waiting for response.")
@@ -69,7 +116,7 @@ class MOKAPipelineExe():
 
     def get_3D_locations(self):
         while True:
-            result_received=os.path.exists(os.path.join(self.remote_own_folder,"log.json"))
+            result_received=os.path.exists(os.path.join(self.local_own_folder,"log.json"))
 
 
             if result_received:
@@ -81,7 +128,7 @@ class MOKAPipelineExe():
 
         print("result received, start execution")
 
-        with open(os.path.join(self.remote_own_folder,"log.json")) as f:
+        with open(os.path.join(self.local_own_folder,"log.json")) as f:
             log=json.load(f)
 
         if not log["plan_success"]:
@@ -113,11 +160,11 @@ class MOKAPipelineExe():
 
     def execute(self,pick_point_3D,place_point_3D):
         
+
         pre_grasping_offset=0.05
 
         pre_pick_point_3D=pick_point_3D.copy()
         pre_pick_point_3D[2]-=pre_grasping_offset
-
 
         after_grasping_point_3D=pick_point_3D.copy()
         after_grasping_point_3D[2]=self.moving_height
@@ -128,12 +175,18 @@ class MOKAPipelineExe():
         
 
 
-        self.pre_releasing_point_3D=place_point_3D.copy()
-        self.pre_releasing_point_3D[2]=self.moving_height
+        pre_releasing_point_3D=place_point_3D.copy()
+        pre_releasing_point_3D[2]=self.moving_height
 
         default_joint_position=[-0.12412961030884695, -2.144660585057312, 1.5816871877202257, -0.9976501117431009, 4.716753443560367, 1.57439925225723]
 
-
+        print(f"""
+        pick_point_3D:{pick_point_3D},
+        place_point_3D:{place_point_3D},
+        pre_pick_point_3D:{pre_pick_point_3D},
+        after_grasping_point_3D:{after_grasping_point_3D},
+        pre_releasing_point_3D:{pre_releasing_point_3D},
+        """)
 
         print("moving to pre grasping point")
         self.move_robot_to_picked_point(pre_pick_point_3D)
@@ -141,7 +194,7 @@ class MOKAPipelineExe():
         input("Press enter to continue to grasping point")
 
         print("moving to picking point")
-
+        self.move_robot_to_picked_point(pick_point_3D)
         input("Press enter to grasp")
 
         self.close_gripper(self.robot)
@@ -159,7 +212,7 @@ class MOKAPipelineExe():
 
         input("Press enter to continue to pre releasing point")
 
-        self.move_robot_to_picked_point(self.pre_releasing_point_3D)
+        self.move_robot_to_picked_point(pre_releasing_point_3D)
 
         input("Press enter to continue to releasing point")
         self.move_robot_to_picked_point(place_point_3D)
@@ -172,26 +225,14 @@ class MOKAPipelineExe():
 
         input("Press enter to continue to after releasing point")
 
-        
+        returning_robot=urx.Robot("192.10.0.12")
         for i in range(100):
-            self.robot.servoj(
+            returning_robot.servoj(
                 default_joint_position, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
             )
         time.sleep(1)
         print('Finished moving the right arm to starting states.')
 
-
-
-
-
-
-
-
-
-
-
-
-        # move to pick point
 
 
 
@@ -212,7 +253,7 @@ class MOKAPipelineExe():
         time.sleep(0.05)
 
 
-    def move_robot_to_picked_point(camera_point):
+    def move_robot_to_picked_point(self,camera_point):
         acceleration = 0.2
         velocity = 0.05
         
@@ -244,7 +285,6 @@ class MOKAPipelineExe():
 
         # use current robot's z coordinate to avoid collision with the table.
         robot_tcp = np.array(robot_tcp_pos)
-        cam_to_base_to_tcp_point[2] = robot_tcp[2]
         print('Final camera-to-base-to-tcp point: ', cam_to_base_to_tcp_point)
         delta_movement_based_on_tcp = cam_to_base_to_tcp_point[:3] - robot_tcp
         print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp)
@@ -257,3 +297,42 @@ class MOKAPipelineExe():
         
 
 
+if __name__=="__main__":
+    local_data_root_folder="./tasks"
+    remote_data_root_folder="/home/enyuzhao/code/Ben-VLM/real_world_moka_data"
+    remote_pwd_path="/home/enyuzhao/code/Ben-VLM"
+
+
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--task_name",type=str,required=True)
+    parser.add_argument("--version",type=int,default=0)
+    parser.add_argument("--height_required",action="store_true")
+    parser.add_argument("--moving_height",type=float,default=0.2)
+    parser.add_argument("--place_height",type=float,default=0.05)
+    parser.add_argument("--model_name",type=str,default="gpt-4o")
+
+    args=parser.parse_args()
+
+    task_name=args.task_name
+    version=args.version
+    height_required=args.height_required
+    moving_height=args.moving_height
+    place_height=args.place_height
+    model_name=args.model_name
+
+    local_task_folder=os.path.join(local_data_root_folder,task_name)
+    remote_task_folder=os.path.join(remote_data_root_folder,task_name)
+
+
+    pipeline=MOKAPipelineExe(local_task_folder,remote_task_folder,model_name,version,height_required,moving_height,place_height)
+
+    pipeline.pre_execution(remote_pwd_path=remote_pwd_path)
+
+    # input("Press enter if the json file is transferred back here")
+
+    pick_point_3D,place_point_3D=pipeline.get_3D_locations()
+    
+    if pick_point_3D is not None and place_point_3D is not None:
+        input("Press enter to start execution")
+
+        pipeline.execute(pick_point_3D,place_point_3D)
