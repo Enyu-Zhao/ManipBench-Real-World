@@ -102,7 +102,7 @@ def visualize_point_cloud(rgb, depth, intrinsics, depth_scale):
     # o3d.visualization.draw_geometries([pcd],
     #                                 zoom=0.47999999999999976,
     #                                 front=[ 0.1172293277274971, 0.094658051301072965, -0.98858339964033515 ],
-    #                                 lookat=[ -4.2709908435416708e-05, -1.838764854445177e-05, 0.000339248996169772 ],
+    #                                 lookat=[ -4.pixel_to_3D2709908435416708e-05, -1.838764854445177e-05, 0.000339248996169772 ],
     #                                 up=[ 0.007463149155373737, -0.99550299721168745, -0.094435607411763683 ])
 
     vis = o3d.visualization.VisualizerWithEditing()

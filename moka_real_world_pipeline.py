@@ -9,6 +9,7 @@ from image_capture import capture_image_from_depth_camera
 import json
 import urx
 import argparse
+from PIL import Image
 
 TABLE_HEIGHT=0.862
 
@@ -26,6 +27,7 @@ def pixel_to_3D(x,y,depth_value,intrinsics):
 
 
 
+
 def get_depth_value_at_coordinate(coordinate,depth_array_path):
     depth_image=np.load(depth_array_path)
 
@@ -37,15 +39,14 @@ def get_depth_value_at_coordinate(coordinate,depth_array_path):
 
 class MOKAPipelineExe():
     def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05):
+
+        # Initialize the pipeline
         self.local_task_folder = local_task_folder
         self.local_own_folder = os.path.join(local_task_folder, f"{model_name}_V{version}")
 
-        self.task_description_path=os.path.join(self.local_task_folder,"task_description.txt")
+        self.task_description_path=os.path.join(self.local_task_folder,"task_description.txt") #currently not used, I just update the task_description in the server side.
         if not os.path.exists(self.local_task_folder):
             os.makedirs(self.local_task_folder)
-            # task_description=input("Please input the task description:")
-            # with open(self.task_description_path,"w") as f:
-            #     f.write(task_description)
 
         if not os.path.exists(self.local_own_folder):
             os.makedirs(self.local_own_folder)
@@ -53,6 +54,8 @@ class MOKAPipelineExe():
         self.remote_task_folder = remote_task_folder
         self.remote_own_folder = os.path.join(remote_task_folder, f"{model_name}_V{version}")
 
+
+        # Build the info file for the server to run the model
         self.info_path=os.path.join(self.local_own_folder,"info.json")
         self.info_to_pass={}
 
@@ -70,12 +73,14 @@ class MOKAPipelineExe():
         self.moving_height=self.table_height-moving_height
         self.place_height=self.table_height-place_height
 
-        self.robot_url="192.10.0.12"
+        self.robot_url="192.10.0.12" #use right arm as default
+
+        # initialize the robot
         self.robot=urx_local.Robot(self.robot_url)
         self.default_joints_pos=[-0.12412961030884695, -2.144660585057312, 1.5816871877202257, -0.9976501117431009, 4.716753443560367, 1.57439925225723]
 
         self.robot_move_to_default()
-        os.system("python test_robotiq_gripper.py")
+        os.system("python test_robotiq_gripper.py")# Test the gripper. If it can open and close, then input exit to continue (you also need to ctrl+c to exit the testing gripper script to continue the pipeline)
 
     def robot_move_to_default(self):
         returning_robot=urx.Robot(self.robot_url)
@@ -86,9 +91,32 @@ class MOKAPipelineExe():
         time.sleep(1)
         print('Finished moving the right arm to starting states.')
 
+    
+    def _crop_image(self,image_path,depth_path,new_shape):
+        color_image=np.array(Image.open(image_path))
+        depth_image=np.load(depth_path)
 
-    def pre_execution(self,remote_pwd_path):
+        color_image=color_image[:new_shape[0],:new_shape[1]]
+        depth_image=depth_image[:new_shape[0],:new_shape[1]]
+        
+
+        return color_image,depth_image
+
+    def pre_execution(self,remote_pwd_path,crop_needed=False):
+        """
+        This function captures the image and depth from the camera, transfer the image to the server, and wait for the response.
+        """
         color_image_path,_,_,raw_depth_array_path,self.intrisics=capture_image_from_depth_camera(self.local_own_folder)
+
+
+        if crop_needed:
+            color_image,depth_image=self._crop_image(color_image_path,raw_depth_array_path,(370,640))
+            cv2.imwrite(color_image_path,color_image)
+            np.save(raw_depth_array_path,depth_image)
+            
+
+        
+
 
  
         ssh_client=create_ssh_client_with_cfg_file("ssh_config.json")
@@ -115,6 +143,10 @@ class MOKAPipelineExe():
 
 
     def get_3D_locations(self):
+
+        """
+        This function waits for the result from the server, and return the 3D locations of the pick and place points. 
+        """
         while True:
             result_received=os.path.exists(os.path.join(self.local_own_folder,"log.json"))
 
@@ -140,6 +172,8 @@ class MOKAPipelineExe():
         picking_point_coordinate=log['points'][picking_point_index]
         picking_point_depth=get_depth_value_at_coordinate(picking_point_coordinate,self.depth_path)
 
+        print(f"picking_point_depth:{picking_point_depth}")
+
 
         placing_point_coordinate=log["end_point"]
         if self.height_required:
@@ -153,7 +187,7 @@ class MOKAPipelineExe():
 
         place_point_3D=pixel_to_3D(placing_point_coordinate[0],placing_point_coordinate[1],placing_point_depth,self.intrisics)
 
-
+        print(f"pick_point_3D:{pick_point_3D},place_point_3D:{place_point_3D}")
         return pick_point_3D,place_point_3D
 
 
@@ -332,7 +366,11 @@ if __name__=="__main__":
 
     pick_point_3D,place_point_3D=pipeline.get_3D_locations()
     
+
     if pick_point_3D is not None and place_point_3D is not None:
         input("Press enter to start execution")
 
         pipeline.execute(pick_point_3D,place_point_3D)
+
+    else:
+        print("No pick and place points returned, exiting")
