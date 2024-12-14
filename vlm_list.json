@@ -1,0 +1,58 @@
+{
+    "0": {
+        "model_name": "gpt-4o",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "1": {
+        "model_name": "gpt-4o-mini",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "2": {
+        "model_name": "glm",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "3": {
+        "model_name": "internvl",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "4": {
+        "model_name": "gemini-1.5-pro",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "5": {
+        "model_name": "gemini-1.5-flash",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    },
+    "6": {
+        "model_name": "qwenvl",
+        "task_tested": [
+            {
+                "fold_fabric_0": false
+            }
+        ]
+    }
+}

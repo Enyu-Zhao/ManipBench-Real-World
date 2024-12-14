@@ -1,0 +1,26 @@
+{
+    "0": {
+        "model_name": "gpt-4o",
+        "task_tested": []
+    },
+    "1": {
+        "model_name": "gpt-4o-mini",
+        "task_tested": []
+    },
+    "2": {
+        "model_name": "glm",
+        "task_tested": []
+    },
+    "3": {
+        "model_name": "internvl",
+        "task_tested": []
+    },
+    "4": {
+        "model_name": "gemini-1.5-pro",
+        "task_tested": []
+    },
+    "5": {
+        "model_name": "gemini-1.5-flash",
+        "task_tested": []
+    }
+}

@@ -21,7 +21,7 @@ def pixel_to_3D(x,y,depth_value,intrinsics):
 
     X=(x-cx)*depth_value/fx
     Y=(y-cy)*depth_value/fy
-    Z=depth_value
+    Z=depth_value+0.005
 
     return [X,Y,Z]
 
@@ -38,7 +38,7 @@ def get_depth_value_at_coordinate(coordinate,depth_array_path):
 
 
 class MOKAPipelineExe():
-    def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05):
+    def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05,test_gripper=True):
 
         # Initialize the pipeline
         self.local_task_folder = local_task_folder
@@ -80,7 +80,9 @@ class MOKAPipelineExe():
         self.default_joints_pos=[-0.12412961030884695, -2.144660585057312, 1.5816871877202257, -0.9976501117431009, 4.716753443560367, 1.57439925225723]
 
         self.robot_move_to_default()
-        os.system("python test_robotiq_gripper.py")# Test the gripper. If it can open and close, then input exit to continue (you also need to ctrl+c to exit the testing gripper script to continue the pipeline)
+
+        if test_gripper:
+            os.system("python test_robotiq_gripper.py")# Test the gripper. If it can open and close, then input exit to continue (you also need to ctrl+c to exit the testing gripper script to continue the pipeline)
 
     def robot_move_to_default(self):
         returning_robot=urx.Robot(self.robot_url)
@@ -341,6 +343,7 @@ if __name__=="__main__":
     parser.add_argument("--task_name",type=str,required=True)
     parser.add_argument("--version",type=int,default=0)
     parser.add_argument("--height_required",action="store_true")
+    parser.add_argument("--test_gripper",action="store_true")
     parser.add_argument("--moving_height",type=float,default=0.2)
     parser.add_argument("--place_height",type=float,default=0.05)
     parser.add_argument("--model_name",type=str,default="gpt-4o")
@@ -353,14 +356,14 @@ if __name__=="__main__":
     moving_height=args.moving_height
     place_height=args.place_height
     model_name=args.model_name
-
+    test_gripper=args.test_gripper
     local_task_folder=os.path.join(local_data_root_folder,task_name)
     remote_task_folder=os.path.join(remote_data_root_folder,task_name)
 
 
-    pipeline=MOKAPipelineExe(local_task_folder,remote_task_folder,model_name,version,height_required,moving_height,place_height)
+    pipeline=MOKAPipelineExe(local_task_folder,remote_task_folder,model_name,version,height_required,moving_height,place_height,test_gripper)
 
-    pipeline.pre_execution(remote_pwd_path=remote_pwd_path)
+    pipeline.pre_execution(remote_pwd_path=remote_pwd_path,crop_needed=True)
 
     # input("Press enter if the json file is transferred back here")
 
