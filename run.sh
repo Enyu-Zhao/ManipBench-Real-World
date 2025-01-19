@@ -1,0 +1,1 @@
+python3.10 moka_real_world_pipeline.py --task_name Fold_Fabric --version 0 --moving_height 0.05 --model_name qwenvl

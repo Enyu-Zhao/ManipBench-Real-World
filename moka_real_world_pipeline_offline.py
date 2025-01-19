@@ -5,7 +5,6 @@ import pyrealsense2 as rs
 import urx_local
 import time
 from ssh_transfer import transfer_file,create_remote_directory,create_ssh_client_with_cfg_file
-from scp import SCPClient
 from image_capture import capture_image_from_depth_camera
 import json
 import urx
@@ -22,8 +21,8 @@ def pixel_to_3D(x,y,depth_value,intrinsics):
 
     X=(x-cx)*depth_value/fx
     Y=(y-cy)*depth_value/fy
-    Z=depth_value+0.005
-    # Z=depth_value
+    # Z=depth_value+0.005
+    Z=depth_value
 
     return [X,Y,Z]
 
@@ -123,21 +122,21 @@ class MOKAPipelineExe():
 
 
  
-        ssh_client=create_ssh_client_with_cfg_file("ssh_config.json")
-        create_remote_directory(ssh_client,self.remote_task_folder)
-        create_remote_directory(ssh_client,self.remote_own_folder)
+        # ssh_client=create_ssh_client_with_cfg_file("ssh_config.json")
+        # create_remote_directory(ssh_client,self.remote_task_folder)
+        # create_remote_directory(ssh_client,self.remote_own_folder)
         
 
-        transfer_file(ssh_client,color_image_path,os.path.join(self.remote_own_folder,"raw_image.png"))
+        # transfer_file(ssh_client,color_image_path,os.path.join(self.remote_own_folder,"raw_image.png"))
 
-        self.info_to_pass["image_path"]=os.path.join(self.remote_own_folder,"raw_image.png")
+        # self.info_to_pass["image_path"]=os.path.join(self.remote_own_folder,"raw_image.png")
 
-        self.info_to_pass["task_description_path"]=os.path.join(self.remote_task_folder,"task_description.txt")
+        # self.info_to_pass["task_description_path"]=os.path.join(self.remote_task_folder,"task_description.txt")
 
-        with open(self.info_path,"w") as f:
-            json.dump(self.info_to_pass,f,indent=4)
+        # with open(self.info_path,"w") as f:
+        #     json.dump(self.info_to_pass,f,indent=4)
 
-        transfer_file(ssh_client,self.info_path,os.path.join(remote_pwd_path,"info.json"))
+        # transfer_file(ssh_client,self.info_path,os.path.join(remote_pwd_path,"info.json"))
 
 
         print("finish pre_execution, transfered image to server, waiting for response.")
@@ -145,51 +144,12 @@ class MOKAPipelineExe():
         self.depth_path=raw_depth_array_path
         
 
-    def wait_for_remote_file(self, ssh_client, remote_file_path, sleep_time=1):
-        """
-        Wait until the specified file exists on the remote machine.
-        """
-        print(f"Waiting for {remote_file_path} to exist on the remote machine...")
-        while True:
-            # Check for file existence using 'test -f' on remote
-            stdin, stdout, stderr = ssh_client.exec_command(f"test -f {remote_file_path} && echo 'exists' || echo 'missing'")
-            result = stdout.read().decode().strip()
-
-            if result == "exists":
-                print(f"Found {remote_file_path} on the remote machine.")
-                break
-            else:
-                print(f"File {remote_file_path} not found. Retrying in {sleep_time} second(s)...")
-                time.sleep(sleep_time)
-
 
     def get_3D_locations(self):
 
         """
         This function waits for the result from the server, and return the 3D locations of the pick and place points. 
         """
-        ssh_client=create_ssh_client_with_cfg_file("ssh_config.json")
-        remote_path = "/home/enyuzhao/code/Ben-VLM/temp_storage_for_scp"
-        local_path = self.local_own_folder
-
-        # Define the path to check for 'log.json'
-        remote_log_file = os.path.join(remote_path, "log.json")
-
-        # Wait for the log file to exist
-        self.wait_for_remote_file(ssh_client, remote_log_file)
-
-        with SCPClient(ssh_client.get_transport()) as scp:
-            # List the contents of the remote folder
-            stdin, stdout, stderr = ssh_client.exec_command(f"ls -A {remote_path}")
-            items = stdout.read().decode().splitlines()
-
-            # Copy each item from the remote folder
-            for item in items:
-                remote_item_path = f"{remote_path}/{item}"
-                print(f"Copying {remote_item_path} to {local_path}")
-                scp.get(remote_item_path, local_path, recursive=True)
-        print(f"Folder copied from {remote_path} to {local_path}")
-
         while True:
             result_received=os.path.exists(os.path.join(self.local_own_folder,"log.json"))
 
@@ -341,9 +301,13 @@ class MOKAPipelineExe():
 
 
         camera_to_robot_base_trans_matrix = np.array([
-        [0.0202684,  -0.99941, 0.0277175, -0.640035],
-        [-0.999324, -0.0194006, 0.0312273,  0.145574],
-        [-0.0306712, -0.0283317, -0.999128,  0.862779],
+        # [0.990668, -0.0666395,   0.118892,   0.582191],
+        # [-0.13553,  -0.389404,   0.911041,  -0.576265],
+        # [-0.0144143,  -0.918653,  -0.394802,     0.3589],
+        # [        0,          0,          0,          1]
+        [0.26834, -0.961192, 0.0640536, -0.612526],
+        [-0.963265, -0.268468, 0.00676911, 0.145355],
+        [0.0106899, -0.063517, -0.997924, 0.766989],
         [0,         0,         0,         1]
         ])
 
