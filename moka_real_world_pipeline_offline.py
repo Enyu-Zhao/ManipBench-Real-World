@@ -11,6 +11,14 @@ import urx
 import argparse
 from PIL import Image
 
+MODELS=["gpt-4o","o1","gpt-4o-mini","gemini-1.5-pro","gemini-1.5-flash","glm-4v","qwenvl","InternVL2","InternVL2_5","Qwen2VL"]
+
+MODEL_WITH_DIFFERENT_SIZE={
+    "InternVL2":["1B","2B","4B","8B","26B"],
+    "InternVL2_5":["1B","2B","4B","8B","26B"],
+    "Qwen2VL":["2B","7B"],
+    }
+
 TABLE_HEIGHT=0.872 # meter
 
 def pixel_to_3D(x,y,depth_value,intrinsics):
@@ -41,6 +49,14 @@ def get_depth_value_at_coordinate(coordinate,depth_array_path):
 class MOKAPipelineExe():
     def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05,test_gripper=True):
 
+        if model_name not in MODELS:
+            print(f"Model name {model_name} not supported, please choose from {MODELS}")
+            return
+        
+        if model_name in MODEL_WITH_DIFFERENT_SIZE:
+            model_size=input(f"Model {model_name} has different sizes, please choose from {MODEL_WITH_DIFFERENT_SIZE[model_name]}")
+            model_name=f"{model_name}_{model_size}"
+
         # Initialize the pipeline
         self.local_task_folder = local_task_folder
         self.local_own_folder = os.path.join(local_task_folder, f"{model_name}_V{version}")
@@ -60,12 +76,15 @@ class MOKAPipelineExe():
         self.info_path=os.path.join(self.local_own_folder,"info.json")
         self.info_to_pass={}
 
-        self.info_to_pass["model_name"]=model_name
+        model_info={"model_name":model_name,"VLM_size":model_size} if model_name in MODEL_WITH_DIFFERENT_SIZE else {"model_name":model_name}
+
+        self.info_to_pass["model_name"]=model_info
         self.info_to_pass["version"]=version
         self.info_to_pass["remote_task_folder"]=os.path.abspath(self.local_task_folder)
         self.info_to_pass["remote_own_folder"]=os.path.abspath(self.local_own_folder)
         self.info_to_pass["task_folder"]=self.remote_task_folder
         self.info_to_pass["own_folder"]=self.remote_own_folder
+        
 
 
 
