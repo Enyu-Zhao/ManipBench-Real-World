@@ -19,7 +19,7 @@ MODEL_WITH_DIFFERENT_SIZE={
     "Qwen2VL":["2B","7B"],
     }
 
-TABLE_HEIGHT=0.872 # meter
+TABLE_HEIGHT=0.880 # meter
 
 def pixel_to_3D(x,y,depth_value,intrinsics):
     fx=intrinsics.fx
@@ -78,7 +78,7 @@ class MOKAPipelineExe():
 
         model_info={"model_name":model_name,"VLM_size":model_size} if model_name in MODEL_WITH_DIFFERENT_SIZE else {"model_name":model_name}
 
-        self.info_to_pass["model_name"]=model_info
+        self.info_to_pass["model_info"]=model_info
         self.info_to_pass["version"]=version
         self.info_to_pass["remote_task_folder"]=os.path.abspath(self.local_task_folder)
         self.info_to_pass["remote_own_folder"]=os.path.abspath(self.local_own_folder)
@@ -115,14 +115,20 @@ class MOKAPipelineExe():
 
     
     def _crop_image(self,image_path,depth_path,new_shape):
-        color_image=np.array(Image.open(image_path))
-        depth_image=np.load(depth_path)
+        image = cv2.imread(image_path)
+        print(image.shape)
+        x_start, y_start, x_end, y_end = 0, 0, new_shape[0], new_shape[1]  # Example coordinates
 
-        color_image=color_image[:new_shape[0],:new_shape[1]]
+        cropped_image = image[x_start:x_end, y_start:y_end]
+
+        # color_image=np.array(image)
+        depth_image=np.load(depth_path)
+        print(depth_image.shape)
+        # color_image=color_image[:new_shape[0],:new_shape[1]]
         depth_image=depth_image[:new_shape[0],:new_shape[1]]
         
 
-        return color_image,depth_image
+        return cropped_image,depth_image
 
     def pre_execution(self,remote_pwd_path,crop_needed=False):
         """
@@ -133,6 +139,8 @@ class MOKAPipelineExe():
 
         if crop_needed:
             color_image,depth_image=self._crop_image(color_image_path,raw_depth_array_path,(370,640))
+            # color_image = cv2.cvtColor(color_image, cv2.COLOR_RGB2BGR)
+            # color_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
             cv2.imwrite(color_image_path,color_image)
             np.save(raw_depth_array_path,depth_image)
             
@@ -318,19 +326,24 @@ class MOKAPipelineExe():
 
         robot = urx_local.Robot("192.10.0.11") # right robot arm
 
+        # Update the transformation matrix based on the handeye calibration result
+        # camera_to_robot_base_trans_matrix = np.array([
+        # # [0.990668, -0.0666395,   0.118892,   0.582191],
+        # # [-0.13553,  -0.389404,   0.911041,  -0.576265],
+        # # [-0.0144143,  -0.918653,  -0.394802,     0.3589],
+        # # [        0,          0,          0,          1]
+        # [0.26834, -0.961192, 0.0640536, -0.612526],
+        # [-0.963265, -0.268468, 0.00676911, 0.145355],
+        # [0.0106899, -0.063517, -0.997924, 0.766989],
+        # [0,         0,         0,         1]
+        # ])
 
-        camera_to_robot_base_trans_matrix = np.array([
-        # [0.990668, -0.0666395,   0.118892,   0.582191],
-        # [-0.13553,  -0.389404,   0.911041,  -0.576265],
-        # [-0.0144143,  -0.918653,  -0.394802,     0.3589],
-        # [        0,          0,          0,          1]
-        [0.26834, -0.961192, 0.0640536, -0.612526],
-        [-0.963265, -0.268468, 0.00676911, 0.145355],
-        [0.0106899, -0.063517, -0.997924, 0.766989],
-        [0,         0,         0,         1]
+        camera_to_robot_base_trans_matrix=np.array([
+        [0.0264456,   -0.99925,  0.0282864,  -0.635955],
+        [-0.999285, -0.0256604,  0.0277731,    0.04092],
+        [-0.0270264, -0.0290007,  -0.999214,   0.866795],
+        [0,          0,          0,          1],
         ])
-
-
 
 
 
@@ -371,6 +384,8 @@ if __name__=="__main__":
     parser.add_argument("--moving_height",type=float,default=0.2)
     parser.add_argument("--place_height",type=float,default=0.05)
     parser.add_argument("--model_name",type=str,default="gpt-4o")
+    parser.add_argument("--num_points_per_object",type=int,default=1)
+    parser.add_argument("--num_grids_per_column",type=int,default=5)
 
     args=parser.parse_args()
 

@@ -12,19 +12,28 @@ import urx
 import argparse
 from PIL import Image
 
-TABLE_HEIGHT=0.872 # meter
+MODELS=["gpt-4o","o1","gpt-4o-mini","gemini-1.5-pro","gemini-1.5-flash","glm-4v","qwenvl","InternVL2","InternVL2_5","Qwen2VL"]
+
+MODEL_WITH_DIFFERENT_SIZE={
+    "InternVL2":["1B","2B","4B","8B","26B"],
+    "InternVL2_5":["1B","2B","4B","8B","26B"],
+    "Qwen2VL":["2B","7B"],
+    }
+
+
+TABLE_HEIGHT=0.880 # meter
 
 def pixel_to_3D(x,y,depth_value,intrinsics):
     fx=intrinsics.fx
     fy=intrinsics.fy
     cx=intrinsics.ppx
     cy=intrinsics.ppy
-
+    print(f"fx:{fx},fy:{fy},cx:{cx},cy:{cy}")
     X=(x-cx)*depth_value/fx
     Y=(y-cy)*depth_value/fy
     Z=depth_value+0.005
     # Z=depth_value
-
+    print(f"X:{X},Y:{Y},Z:{Z}")
     return [X,Y,Z]
 
 
@@ -40,7 +49,16 @@ def get_depth_value_at_coordinate(coordinate,depth_array_path):
 
 
 class MOKAPipelineExe():
-    def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05,test_gripper=True):
+    def __init__(self,local_task_folder,remote_task_folder,model_name,version=0,height_required=False,moving_height=0.2,place_height=0.05,test_gripper=True,num_points_per_object=1,num_grids_per_column=5):
+
+        if model_name not in MODELS:
+            print(f"Model name {model_name} not supported, please choose from {MODELS}")
+            return
+        base_name=model_name
+        
+        if model_name in MODEL_WITH_DIFFERENT_SIZE:
+            model_size=input(f"Model {model_name} has different sizes, please choose from {MODEL_WITH_DIFFERENT_SIZE[model_name]}")
+            model_name=f"{model_name}-{model_size}"
 
         # Initialize the pipeline
         self.local_task_folder = local_task_folder
@@ -60,14 +78,16 @@ class MOKAPipelineExe():
         # Build the info file for the server to run the model
         self.info_path=os.path.join(self.local_own_folder,"info.json")
         self.info_to_pass={}
+        model_info={"model_name":model_name,"VLM_size":model_size} if base_name in MODEL_WITH_DIFFERENT_SIZE else {"model_name":model_name}
 
-        self.info_to_pass["model_name"]=model_name
+        self.info_to_pass["model_info"]=model_info
         self.info_to_pass["version"]=version
         self.info_to_pass["remote_task_folder"]=os.path.abspath(self.local_task_folder)
         self.info_to_pass["remote_own_folder"]=os.path.abspath(self.local_own_folder)
         self.info_to_pass["task_folder"]=self.remote_task_folder
         self.info_to_pass["own_folder"]=self.remote_own_folder
-
+        self.info_to_pass["num_points_per_object"]=num_points_per_object
+        self.info_to_pass["num_grids_per_column"]=num_grids_per_column
 
 
         self.table_height=TABLE_HEIGHT
@@ -97,14 +117,20 @@ class MOKAPipelineExe():
 
     
     def _crop_image(self,image_path,depth_path,new_shape):
-        color_image=np.array(Image.open(image_path))
-        depth_image=np.load(depth_path)
+        image = cv2.imread(image_path)
+        print(image.shape)
+        x_start, y_start, x_end, y_end = 0, 0, new_shape[0], new_shape[1]  # Example coordinates
 
-        color_image=color_image[:new_shape[0],:new_shape[1]]
+        cropped_image = image[x_start:x_end, y_start:y_end]
+
+        # color_image=np.array(image)
+        depth_image=np.load(depth_path)
+        print(depth_image.shape)
+        # color_image=color_image[:new_shape[0],:new_shape[1]]
         depth_image=depth_image[:new_shape[0],:new_shape[1]]
         
 
-        return color_image,depth_image
+        return cropped_image,depth_image
 
     def pre_execution(self,remote_pwd_path,crop_needed=False):
         """
@@ -213,6 +239,7 @@ class MOKAPipelineExe():
         # get the target coordinate
         picking_point_index=log['picking_point']
         picking_point_coordinate=log['points'][picking_point_index]
+        print(f"picking_point_coordinate:{picking_point_coordinate}")
         picking_point_depth=get_depth_value_at_coordinate(picking_point_coordinate,self.depth_path)
 
         print(f"picking_point_depth:{picking_point_depth}")
@@ -225,7 +252,7 @@ class MOKAPipelineExe():
         else:
             placing_point_depth=self.place_height
 
-
+        print(f"placing_point_coordinate:{placing_point_coordinate}")
         pick_point_3D=pixel_to_3D(picking_point_coordinate[0],picking_point_coordinate[1],picking_point_depth,self.intrisics)
 
         place_point_3D=pixel_to_3D(placing_point_coordinate[0],placing_point_coordinate[1],placing_point_depth,self.intrisics)
@@ -245,7 +272,8 @@ class MOKAPipelineExe():
 
         after_grasping_point_3D=pick_point_3D.copy()
         after_grasping_point_3D[2]=self.moving_height
-
+        
+        
         if self.moving_height>pick_point_3D[2]:
             print("Moving height is lower than picking height, exiting,please check the height.")
             return
@@ -339,14 +367,21 @@ class MOKAPipelineExe():
 
         robot = urx_local.Robot("192.10.0.11") # right robot arm
 
+        # Update the following matrix based on the calibration result
+        # camera_to_robot_base_trans_matrix = np.array([
+        # [0.0202684,  -0.99941, 0.0277175, -0.640035],
+        # [-0.999324, -0.0194006, 0.0312273,  0.145574],
+        # [-0.0306712, -0.0283317, -0.999128,  0.862779],
+        # [0,         0,         0,         1]
+        # ]
 
-        camera_to_robot_base_trans_matrix = np.array([
-        [0.0202684,  -0.99941, 0.0277175, -0.640035],
-        [-0.999324, -0.0194006, 0.0312273,  0.145574],
-        [-0.0306712, -0.0283317, -0.999128,  0.862779],
-        [0,         0,         0,         1]
+
+        camera_to_robot_base_trans_matrix=np.array([
+        [0.0184975,   -0.999826,  0.0023983,  -0.593636],
+        [-0.999808,  -0.0184815,  0.00653189,    0.049882],
+        [-0.00648643, -0.00251866,   -0.999976,    0.861436],
+        [0,          0,          0,          1],
         ])
-
 
 
 
@@ -388,6 +423,10 @@ if __name__=="__main__":
     parser.add_argument("--moving_height",type=float,default=0.2)
     parser.add_argument("--place_height",type=float,default=0.05)
     parser.add_argument("--model_name",type=str,default="gpt-4o")
+    parser.add_argument("--num_points_per_object",type=int,default=1)
+    parser.add_argument("--num_grids_per_column",type=int,default=5)
+
+    args=parser.parse_args()
 
     args=parser.parse_args()
 
@@ -401,8 +440,11 @@ if __name__=="__main__":
     local_task_folder=os.path.join(local_data_root_folder,task_name)
     remote_task_folder=os.path.join(remote_data_root_folder,task_name)
 
+    num_points_per_object=args.num_points_per_object
+    num_grids_per_column=args.num_grids_per_column
 
-    pipeline=MOKAPipelineExe(local_task_folder,remote_task_folder,model_name,version,height_required,moving_height,place_height,test_gripper)
+
+    pipeline=MOKAPipelineExe(local_task_folder,remote_task_folder,model_name,version,height_required,moving_height,place_height,test_gripper,num_points_per_object,num_grids_per_column)
 
     pipeline.pre_execution(remote_pwd_path=remote_pwd_path,crop_needed=True)
 
