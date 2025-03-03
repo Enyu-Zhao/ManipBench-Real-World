@@ -6,7 +6,7 @@ import os
 import argparse
 
 # Function to capture an image from the depth camera
-def capture_image_from_depth_camera(save_folder,save_all=True):
+def capture_image_from_depth_camera(save_folder,specifier="",save_all=True):
     """
 
     Capture an image from the depth camera and save it to the specified folder.
@@ -75,9 +75,19 @@ def capture_image_from_depth_camera(save_folder,save_all=True):
         
         # Convert images to numpy arrays
         depth_image = np.asanyarray(depth_frame.get_data())
+
+        # if rotate:
+        #     depth_image=np.rot90(depth_image,1)
+
         color_image = np.asanyarray(color_frame.get_data())
+
+        # if rotate:
+        #     color_image=np.rot90(color_image,1)
         raw_depth_image=depth_image.copy()
         
+
+
+
         # Stack both images horizontally for saving
         depth_colormap = cv2.applyColorMap(cv2.convertScaleAbs(depth_image, alpha=0.03), cv2.COLORMAP_JET)
 
@@ -93,11 +103,12 @@ def capture_image_from_depth_camera(save_folder,save_all=True):
         else:
             combined_images = np.hstack((color_image, depth_colormap))
 
-        
-        color_image_path=os.path.join(save_folder, 'color_image.png')
-        depth_image_path=os.path.join(save_folder, 'depth_image.png')
-        combined_image_path=os.path.join(save_folder, 'combined_image.png')
-        raw_depth_image_path=os.path.join(save_folder, 'raw_depth_image.npy')
+        color_image_path=os.path.join(save_folder, f'color_image{specifier}.png')
+        depth_image_path=os.path.join(save_folder, f'depth_image{specifier}.png')
+        combined_image_path=os.path.join(save_folder, f'combined_image{specifier}.png')
+        raw_depth_image_path=os.path.join(save_folder, f'raw_depth_image{specifier}.npy')
+
+            
 
 
 
@@ -213,6 +224,7 @@ def view_real_time_from_depth_camera():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Capture an image from the depth camera.')
     parser.add_argument('--save', action='store_true', help='Save the image.')
+    # parser.add_argument('--rotate', action='store_true', help='Rotate the image.')
     parser.add_argument('--save_folder', type=str, default='./', help='Folder to save the image.')
     args = parser.parse_args()
 
