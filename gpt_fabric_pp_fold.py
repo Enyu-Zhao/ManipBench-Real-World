@@ -12,6 +12,15 @@ import urx
 import argparse
 from PIL import Image
 
+# Test roboticstoolbox
+import roboticstoolbox as rtb
+from spatialmath import *
+import threading
+
+
+
+
+
 MODELS=["gpt-4o","o1","gpt-4o-mini","gemini-1.5-pro","gemini-1.5-flash","glm-4v","qwenvl","InternVL2","InternVL2_5","Qwen2VL"]
 
 MODEL_WITH_DIFFERENT_SIZE={
@@ -41,7 +50,7 @@ def pixel_to_3D(x,y,depth_value,intrinsics):
     print(f"fx:{fx},fy:{fy},cx:{cx},cy:{cy}")
     X=(x-cx)*depth_value/fx
     Y=(y-cy)*depth_value/fy
-    Z=depth_value+0.005
+    Z=depth_value
     # Z=depth_value
     print(f"X:{X},Y:{Y},Z:{Z}")
     return [X,Y,Z]
@@ -136,10 +145,18 @@ class GPT_Fab_PipelineExe():
         # initialize the robot
         self.robot_r=urx_local.Robot(self.robot_url_r)
         self.robot_l=urx_local.Robot(self.robot_url_l)
+
+
+        self.simulated_robot_l=rtb.models.UR5()
+        self.simulated_robot_r=rtb.models.UR5()
+        
         
         self.starting_robot_joints_left = [-3.141686935884836, -2.356288772693141, 1.571568091705342, -0.7851389208139626, -1.5708287439107185, 0.000]
+        self.simulated_robot_l.q=self.starting_robot_joints_left
+
 
         self.starting_robot_joints_right = [3.1417192709197925, -0.7849887185641355, -1.5709848785996405, -2.356405136870646, 1.5708449348819644, 0.000]
+        self.simulated_robot_r.q=self.starting_robot_joints_right
         
 
         self.robot_move_to_default()
@@ -584,6 +601,7 @@ class GPT_Fab_PipelineExe():
         self.robot_move_to_default()
         print('Finished moving the right arm to starting states.')
 
+
     def move_robot_to_picked_point(self,camera_point,arm="right"):
         # Using the right arm for now
         acceleration = 0.2
@@ -638,8 +656,9 @@ class GPT_Fab_PipelineExe():
         # robot.translate((delta_movement_based_on_tcp[0], delta_movement_based_on_tcp[1], delta_movement_based_on_tcp[2]), acceleration, velocity)
         robot.set_tool_voltage(24)
         print('Done!!')
-        
-    def move_robot_to_picked_point_dual_arm(self,camera_point_left, camera_point_right):
+
+
+    def move_robot_to_picked_point_dual_arm_test(self,camera_point_left, camera_point_right):
         # Using the right arm for now
         acceleration = 0.2
         velocity = 0.05
@@ -656,65 +675,140 @@ class GPT_Fab_PipelineExe():
         # append 1 to point: [x, y, z, 1]
         camera_point_right = [camera_point_right[0], camera_point_right[1], camera_point_right[2], 1]
 
-        robot_tcp_pos_r = robot_r.getl()[:3]
-        print('Robot tcp postion: ', robot_tcp_pos_r)
+        # robot_tcp_pos_r = robot_r.getl()[:3]
+        # print('Robot tcp postion: ', robot_tcp_pos_r)
 
+        robot_tcp_pos_whole_r=robot_r.getl()
+        print('Robot tcp postion,test: ', robot_r.getl())
+
+        target_tcp_pos_whole_r=robot_tcp_pos_whole_r.copy()
         cam_to_base_to_tcp_point_r = np.matmul(self.camera_to_robot_right_base_matrix, camera_point_right)
         print('cam_to_base_to_tcp_point: ', cam_to_base_to_tcp_point_r)
 
-        # use current robot's z coordinate to avoid collision with the table.
-        robot_tcp_r = np.array(robot_tcp_pos_r)
-        print('Final camera-to-base-to-tcp point: ', cam_to_base_to_tcp_point_r)
-        delta_movement_based_on_tcp_r = cam_to_base_to_tcp_point_r[:3] - robot_tcp_r
-        print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp_r)
-        print('Check everything before executing on the robot!!!')
-        input("Press enter to continue")
+        target_tcp_pos_whole_r[0]=cam_to_base_to_tcp_point_r[0]
+        target_tcp_pos_whole_r[1]=cam_to_base_to_tcp_point_r[1]
+        target_tcp_pos_whole_r[2]=cam_to_base_to_tcp_point_r[2]
 
-        delta_x_r=delta_movement_based_on_tcp_r[0]
-        delta_y_r=delta_movement_based_on_tcp_r[1]
-        delta_z_r=delta_movement_based_on_tcp_r[2]
+        # robot_tcp_r = np.array(robot_tcp_pos_r)
+        # delta_movement_based_on_tcp_r = cam_to_base_to_tcp_point_r[:3] - robot_tcp_r
+        # print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp_r)
+
+
+        # delta_x_r=delta_movement_based_on_tcp_r[0]
+        # delta_y_r=delta_movement_based_on_tcp_r[1]
+        # delta_z_r=delta_movement_based_on_tcp_r[2]
 
 
         # for left arm
         # append 1 to point: [x, y, z, 1]
         camera_point_left = [camera_point_left[0], camera_point_left[1], camera_point_left[2], 1]
 
-        robot_tcp_pos_l = robot_l.getl()[:3]
-        print('Robot tcp postion: ', robot_tcp_pos_l)
+        # robot_tcp_pos_l = robot_l.getl()[:3]
+        # print('Robot tcp postion,test: ', robot_l.getl())
 
+        robot_tcp_pos_whole_l=robot_l.getl()
+        print('Robot tcp postion,test: ', robot_l.getl())
+
+        target_tcp_pos_whole_l=robot_tcp_pos_whole_l.copy()
         cam_to_base_to_tcp_point_l = np.matmul(self.camera_to_robot_left_base_matrix, camera_point_left)
         print('cam_to_base_to_tcp_point: ', cam_to_base_to_tcp_point_l)
 
+
+        target_tcp_pos_whole_l[0]=cam_to_base_to_tcp_point_l[0]
+        target_tcp_pos_whole_l[1]=cam_to_base_to_tcp_point_l[1]
+        target_tcp_pos_whole_l[2]=cam_to_base_to_tcp_point_l[2]
+
         # use current robot's z coordinate to avoid collision with the table.
-        robot_tcp_l = np.array(robot_tcp_pos_l)
-        print('Final camera-to-base-to-tcp point: ', cam_to_base_to_tcp_point_l)
-        delta_movement_based_on_tcp_l = cam_to_base_to_tcp_point_l[:3] - robot_tcp_l
-        print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp_l)
+        # robot_tcp_l = np.array(robot_tcp_pos_l)
+        # delta_movement_based_on_tcp_l = cam_to_base_to_tcp_point_l[:3] - robot_tcp_l
+        # print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp_l)
+
+
+        # delta_x_l=delta_movement_based_on_tcp_l[0]
+        # delta_y_l=delta_movement_based_on_tcp_l[1]
+        # delta_z_l=delta_movement_based_on_tcp_l[2]
+
+
+
+
+
+        base_robot_r=urx.Robot(self.robot_url_r)
+        base_robot_l=urx.Robot(self.robot_url_l)
+
+
+        print("base_robot_getl",base_robot_r.getl())
+
+        pose_vec=base_robot_r.getl()
+        print(dir(pose_vec))
+
+        print("pose_vec_pose position",pose_vec.array)
+
+        pose_vec_new=pose_vec.set_array(target_tcp_pos_whole_r)
+        print("pose_vec_new",pose_vec.array)
+
         print('Check everything before executing on the robot!!!')
-        input("Press enter to continue")
-
-        delta_x_l=delta_movement_based_on_tcp_l[0]
-        delta_y_l=delta_movement_based_on_tcp_l[1]
-        delta_z_l=delta_movement_based_on_tcp_l[2]
+        input("Press enter to move both arms")
 
 
+        for i in range(100):
 
+            base_robot_r.servoc(target_tcp_pos_whole_r, acc=acceleration, vel=velocity,wait=False)
+            base_robot_l.servoc(target_tcp_pos_whole_l, acc=acceleration, vel=velocity,wait=False)
 
-
-
-
-
-        steps=20
-        for i in range(steps):
-            robot_r.translate((delta_x_r/steps, delta_y_r/steps, delta_z_r/steps), acceleration, velocity)
-            robot_l.translate((delta_x_l/steps, delta_y_l/steps, delta_z_l/steps), acceleration, velocity)
-
-        # robot.translate((delta_movement_based_on_tcp[0], delta_movement_based_on_tcp[1], delta_movement_based_on_tcp[2]), acceleration, velocity)
+        # steps=20
+        # for i in range(steps):
+        #     # robot_r.translate((delta_x_r/steps, delta_y_r/steps, delta_z_r/steps), acceleration, velocity)
+        #     # robot_l.translate((delta_x_l/steps, delta_y_l/steps, delta_z_l/steps), acceleration, velocity)
+        #     robot_r.servoc(target_tcp_pos_whole_r, acc=acceleration, vel=velocity)
+        #     robot_l.servoc(target_tcp_pos_whole_l, acc=acceleration, vel=velocity)
+    
         robot_r.set_tool_voltage(24)
         robot_l.set_tool_voltage(24)
         print('Done!!')
+
+
+
+    def move_robot_to_picked_point_dual_arm(self, camera_point_left, camera_point_right):
+        acceleration = 0.2
+        velocity = 0.05
+
+        def process_arm(camera_point, robot, camera_to_robot_matrix, robot_url):
+            camera_point = [camera_point[0], camera_point[1], camera_point[2], 1]
+            print(f"#########################Arm information with IP address {robot_url}###########################")
+            robot_tcp_pos_whole = robot.getl()
+            print('Robot TCP pose: ', robot_tcp_pos_whole)
+            target_tcp_pos_whole = robot_tcp_pos_whole.copy()
+            cam_to_base_to_tcp_point = np.matmul(camera_to_robot_matrix, camera_point)
+            print('Camera point in arm base frame: ', cam_to_base_to_tcp_point)
+            target_tcp_pos_whole[:3] = cam_to_base_to_tcp_point[:3]
+            return target_tcp_pos_whole
+
+        target_tcp_pos_whole_r = process_arm(camera_point_right, self.robot_r, self.camera_to_robot_right_base_matrix, self.robot_url_r)
+        target_tcp_pos_whole_l = process_arm(camera_point_left, self.robot_l, self.camera_to_robot_left_base_matrix, self.robot_url_l)
+
+        print('Check everything before executing on the robot!!!')
+        input("Press enter to move both arms")
+
+        def move_robot_arm_to_pose(robot, target_pos):
+            robot.servoc(target_pos, acc=acceleration, vel=velocity, wait=True)
+
+        thread_r = threading.Thread(target=move_robot_arm_to_pose, args=(self.robot_r, target_tcp_pos_whole_r))
+        thread_l = threading.Thread(target=move_robot_arm_to_pose, args=(self.robot_l, target_tcp_pos_whole_l))
+
+        thread_r.start()
+        thread_l.start()
+
+        thread_r.join()
+        thread_l.join()
+
+        self.robot_r.set_tool_voltage(24)
+        self.robot_l.set_tool_voltage(24)
+        print('Done!!')
+
+    
         
 
+        
 if __name__=="__main__":
     local_data_root_folder="./tasks"
     remote_pwd_path="/home/enyuzhao/code/GPT-Fabric-plus-plus/GPT-Fabric-PP-RL"
@@ -793,6 +887,8 @@ if __name__=="__main__":
             pick_point_3D_l,place_point_3D_l,pick_point_3D_r,place_point_3D_r=pipeline.get_3D_locations_dual_arm(log)
             if pick_point_3D_l is not None and place_point_3D_l is not None and pick_point_3D_r is not None and place_point_3D_r is not None:
                 input("Press enter to start execution")
+                # pipeline.execute_dual_arm_joint(pick_point_3D_l,place_point_3D_l,pick_point_3D_r,place_point_3D_r)
+
                 pipeline.execute_dual_arm(pick_point_3D_l,place_point_3D_l,pick_point_3D_r,place_point_3D_r)
             else:
                 print("No pick and place points returned, exiting")
