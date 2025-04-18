@@ -21,8 +21,13 @@ from urx import Robot
 import time
 
 if __name__ == '__main__':
-    # robot_ip = "192.10.0.11" # left arm
-    robot_ip = "192.10.0.12" # right arm
+
+    arm=input("Enter the arm to control (left or right): ")
+    if arm.lower() == 'left':
+        robot_ip = "192.10.0.12"
+    else:
+        robot_ip = "192.10.0.11" # left arm
+    # robot_ip = "192.10.0.12" # right arm
     robot = Robot(robot_ip)
     print('Robot pose: ', robot.get_pose())
 

@@ -21,6 +21,7 @@ import threading
 
 
 
+
 MODELS=["gpt-4o","o1","gpt-4o-mini","gemini-1.5-pro","gemini-1.5-flash","glm-4v","qwenvl","InternVL2","InternVL2_5","Qwen2VL"]
 
 MODEL_WITH_DIFFERENT_SIZE={
@@ -40,18 +41,31 @@ TASK_STEP_DEFINITION={
 }
 
 
-TABLE_HEIGHT=1.076 # Adjust this later
+TABLE_HEIGHT=1.077 # Adjust this later
 
 def pixel_to_3D(x,y,depth_value,intrinsics):
     fx=intrinsics.fx
     fy=intrinsics.fy
     cx=intrinsics.ppx
     cy=intrinsics.ppy
-    print(f"fx:{fx},fy:{fy},cx:{cx},cy:{cy}")
+    
     X=(x-cx)*depth_value/fx
     Y=(y-cy)*depth_value/fy
+    # Z=depth_value+0.005
+
+    # print(f"Original X:{X},Y:{Y},Z:{Z}")
+
+    # if adjustment_needed:
+    #     mark_x=0.1
+    #     distance_X=X-mark_x
+    #     adjust_X=0.9*distance_X
+    #     X=mark_x+adjust_X
+    #     mark_y=0.1
+    #     distance_Y=Y-mark_y
+    #     adjust_Y=0.9*distance_Y
+    #     Y=mark_y+adjust_Y
+    #     Z=Z+0.015
     Z=depth_value
-    # Z=depth_value
     print(f"X:{X},Y:{Y},Z:{Z}")
     return [X,Y,Z]
 
@@ -68,7 +82,7 @@ def get_depth_value_at_coordinate(coordinate,depth_array_path):
 
 
 class GPT_Fab_PipelineExe():
-    def __init__(self,task,local_task_folder,remote_pwd_path,remote_task_folder,model_name,version=0,moving_height=0.2,place_height=0.05,matrix_file_path="./cam_to_base_matrix.json",user_points="user",test_gripper=False):
+    def __init__(self,task,local_task_folder,remote_pwd_path,remote_task_folder,model_name,version=0,moving_height=0.1,place_height=0.03,matrix_file_path="./cam_to_base_matrix.json",user_points="user",test_gripper=False):
 
         self.TASK_STEP_DEFINITION={
             "CornersEdgesInward":4,
@@ -152,10 +166,14 @@ class GPT_Fab_PipelineExe():
         
         
         self.starting_robot_joints_left = [-3.141686935884836, -2.356288772693141, 1.571568091705342, -0.7851389208139626, -1.5708287439107185, 0.000]
+
+        self.starting_robot_joints_left_rot=[-3.141686935884836, -2.356288772693141, 1.571568091705342, -0.7851389208139626, -1.5708287439107185, 1.5708449348819644]
         self.simulated_robot_l.q=self.starting_robot_joints_left
 
 
         self.starting_robot_joints_right = [3.1417192709197925, -0.7849887185641355, -1.5709848785996405, -2.356405136870646, 1.5708449348819644, 0.000]
+
+        self.starting_robot_joints_right_rot=[3.1417192709197925, -0.7849887185641355, -1.5709848785996405, -2.356405136870646, 1.5708449348819644, 1.5708449348819644]
         self.simulated_robot_r.q=self.starting_robot_joints_right
         
 
@@ -190,6 +208,16 @@ class GPT_Fab_PipelineExe():
         # time.sleep(1)
         print('Finished moving the right arm to starting states.')
 
+    def rotate_gripper_to_half_pi(self):
+        returning_robot_l=urx.Robot(self.robot_url_l)
+        returning_robot_r=urx.Robot(self.robot_url_r)
+        for i in range(100):
+            returning_robot_l.servoj(
+                self.starting_robot_joints_left, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
+            )
+            returning_robot_r.servoj(
+                self.starting_robot_joints_right, vel=0.1, acc=0.15, t=3.0, lookahead_time=0.2, gain=100, wait=False
+            )
 
     def close_gripper(self,robot):
 
@@ -224,7 +252,7 @@ class GPT_Fab_PipelineExe():
 
         return cropped_image,depth_image
 
-    def pre_execution(self,crop_needed=False,crop_shape=(0,100,480,640)):
+    def pre_execution(self,crop_needed=False,crop_shape=(0,100,480,580)):
         """
         This function captures the image and depth from the camera, transfer the image to the server, and wait for the response.
         """
@@ -349,6 +377,9 @@ class GPT_Fab_PipelineExe():
         This function waits for the result from the server, and return the 3D locations of the pick and place points. 
         """
 
+        fixed_depth=TABLE_HEIGHT
+
+
         if not log["plan_success"]:
             print("Plan failed, exiting")
             return None,None
@@ -363,10 +394,10 @@ class GPT_Fab_PipelineExe():
             [0])
 
         if self.crop_needed:
-            picking_point_coordinate=(self.img_size[1]-picking_point_coordinate[1]+self.y_adjust,picking_point_coordinate
-            [0]+self.x_adjust)
+            picking_point_coordinate=(picking_point_coordinate[0]+self.x_adjust,picking_point_coordinate[1]+self.y_adjust)
 
-        picking_point_depth=get_depth_value_at_coordinate(picking_point_coordinate,self.depth_path)
+        # picking_point_depth=get_depth_value_at_coordinate(picking_point_coordinate,self.depth_path)
+        picking_point_depth=fixed_depth
 
         print(f"picking_point_depth:{picking_point_depth}")
 
@@ -375,7 +406,7 @@ class GPT_Fab_PipelineExe():
         if self.rot_needed:
             placing_point_coordinate=(self.img_size[1]-placing_point_coordinate[1],placing_point_coordinate[0])
         if self.crop_needed:
-            placing_point_coordinate=(self.img_size[1]-placing_point_coordinate[1]+self.y_adjust,placing_point_coordinate[0]+self.x_adjust)
+            placing_point_coordinate=(placing_point_coordinate[0]+self.x_adjust,placing_point_coordinate[1]+self.y_adjust)
         placing_point_depth=self.place_height
 
         print(f"placing_point_coordinate:{placing_point_coordinate}")
@@ -387,7 +418,20 @@ class GPT_Fab_PipelineExe():
         return pick_point_3D,place_point_3D
 
     def get_3D_locations_dual_arm(self,log):
+        
+        picking_point_coordinate_l=log['pick_point_l']
+        picking_point_coordinate_r=log['pick_point_r']
 
+        diff_x=abs(picking_point_coordinate_l[0]-picking_point_coordinate_r[0])
+        diff_y=abs(picking_point_coordinate_l[1]-picking_point_coordinate_r[1])
+
+        if diff_x>diff_y:
+            self.rotate_gripper_to_half_pi()
+        else:
+            self.robot_move_to_default()
+
+
+        fixed_depth=TABLE_HEIGHT
         # log=self.load_info()
 
         if not log["plan_success"]:
@@ -402,6 +446,8 @@ class GPT_Fab_PipelineExe():
         if self.crop_needed:
             picking_point_coordinate_l=(picking_point_coordinate_l[0]+self.x_adjust,picking_point_coordinate_l[1]+self.y_adjust)
         picking_point_depth_l=get_depth_value_at_coordinate(picking_point_coordinate_l,self.depth_path)
+
+        picking_point_depth_l=fixed_depth
         print(f"picking_point_coordinate of left arm:{picking_point_coordinate_l},depth:{picking_point_depth_l}")
 
 
@@ -411,6 +457,11 @@ class GPT_Fab_PipelineExe():
         if self.crop_needed:
             picking_point_coordinate_r=(picking_point_coordinate_r[0]+self.x_adjust,picking_point_coordinate_r[1]+self.y_adjust)
         picking_point_depth_r=get_depth_value_at_coordinate(picking_point_coordinate_r,self.depth_path)
+
+        picking_point_depth_r=fixed_depth
+
+
+
         print(f"placing_point_coordinate of right arm:{picking_point_coordinate_r}, depth:{picking_point_depth_r}")
 
 
@@ -434,6 +485,8 @@ class GPT_Fab_PipelineExe():
 
         pick_point_3D_l=pixel_to_3D(picking_point_coordinate_l[0],picking_point_coordinate_l[1],picking_point_depth_l,self.intrisics)
 
+        # pick_point_3D_l[2]=fixed_depth
+
         place_point_3D_l=pixel_to_3D(placing_point_coordinate_l[0],placing_point_coordinate_l[1],placing_point_depth,self.intrisics)
 
         print(f"For left arm: pick_point_3D:{pick_point_3D_l},place_point_3D:{place_point_3D_l}")
@@ -441,6 +494,8 @@ class GPT_Fab_PipelineExe():
 
 
         pick_point_3D_r=pixel_to_3D(picking_point_coordinate_r[0],picking_point_coordinate_r[1],picking_point_depth_r,self.intrisics)
+
+        # pick_point_3D_r[2]=fixed_depth
 
         place_point_3D_r=pixel_to_3D(placing_point_coordinate_r[0],placing_point_coordinate_r[1],placing_point_depth,self.intrisics)
 
@@ -602,59 +657,45 @@ class GPT_Fab_PipelineExe():
         print('Finished moving the right arm to starting states.')
 
 
-    def move_robot_to_picked_point(self,camera_point,arm="right"):
-        # Using the right arm for now
-        acceleration = 0.2
-        velocity = 0.1
-        if arm=="right":
-            robot = urx_local.Robot(self.robot_url_r) # right robot arm
+    def _process_robot_translate(self,camera_point, robot, camera_to_robot_matrix, robot_url):
 
-        # Update the following matrix based on the calibration result
-        # save this to help with updating in the future in the json file.
-        # camera_to_robot_base_trans_matrix = np.array([
-        # [0.0202684,  -0.99941, 0.0277175, -0.640035],
-        # [-0.999324, -0.0194006, 0.0312273,  0.145574],
-        # [-0.0306712, -0.0283317, -0.999128,  0.862779],
-        # [0,         0,         0,         1]
-        # ]
-
-
-            camera_to_robot_base_trans_matrix=self.camera_to_robot_right_base_matrix
-
-        else:
-            robot = urx_local.Robot(self.robot_url_l)
-            camera_to_robot_base_trans_matrix=self.camera_to_robot_left_base_matrix
-
-
-
-
-        # append 1 to point: [x, y, z, 1]
         camera_point = [camera_point[0], camera_point[1], camera_point[2], 1]
-
+        print(f"#########################Arm information with IP address {robot_url}###########################")
         robot_tcp_pos = robot.getl()[:3]
         print('Robot tcp postion: ', robot_tcp_pos)
 
-        cam_to_base_to_tcp_point = np.matmul(camera_to_robot_base_trans_matrix, camera_point)
-        print('cam_to_base_to_tcp_point: ', cam_to_base_to_tcp_point)
-
-        # use current robot's z coordinate to avoid collision with the table.
+        cam_to_base_to_tcp_point = np.matmul(camera_to_robot_matrix, camera_point)
+        
         robot_tcp = np.array(robot_tcp_pos)
-        print('Final camera-to-base-to-tcp point: ', cam_to_base_to_tcp_point)
+        print('Camera point in arm base frame: ', cam_to_base_to_tcp_point)
         delta_movement_based_on_tcp = cam_to_base_to_tcp_point[:3] - robot_tcp
         print('delta_movement_based_on_tcp: ', delta_movement_based_on_tcp)
-        print('Check everything before executing on the robot!!!')
-        input("Press enter to continue")
+
 
         delta_x=delta_movement_based_on_tcp[0]
         delta_y=delta_movement_based_on_tcp[1]
         delta_z=delta_movement_based_on_tcp[2]
 
-        steps=1
-        for i in range(steps):
-            robot.translate((delta_x/steps, delta_y/steps, delta_z/steps), acceleration, velocity)
+        return delta_x, delta_y, delta_z
+ 
 
-        # robot.translate((delta_movement_based_on_tcp[0], delta_movement_based_on_tcp[1], delta_movement_based_on_tcp[2]), acceleration, velocity)
-        robot.set_tool_voltage(24)
+    def move_robot_to_picked_point(self,camera_point,arm="right"):
+        # Using the right arm for now
+        acceleration = 0.2
+        velocity = 0.1
+        if arm=="right":
+
+
+            delta_x,delta_y,delta_z=self._process_robot_translate(camera_point,self.robot_r,self.camera_to_robot_right_base_matrix,self.robot_url_r)
+
+            self.robot_r.translate((delta_x, delta_y, delta_z), acceleration, velocity)
+            self.robot_r.set_tool_voltage(24)
+
+        else:
+            delta_x,delta_y,delta_z=self._process_robot_translate(camera_point,self.robot_l,self.camera_to_robot_left_base_matrix,self.robot_url_l)
+
+            self.robot_l.translate((delta_x, delta_y, delta_z), acceleration, velocity)
+            self.robot_l.set_tool_voltage(24)
         print('Done!!')
 
 
@@ -766,9 +807,38 @@ class GPT_Fab_PipelineExe():
         robot_l.set_tool_voltage(24)
         print('Done!!')
 
+    def move_robot_to_picked_point_dual_arm(self,camera_point_left, camera_point_right):
+        acceleration = 0.2
+        velocity = 0.05
+
+        delta_x_r,delta_y_r,delta_z_r=self._process_robot_translate(camera_point_right,self.robot_r,self.camera_to_robot_right_base_matrix,self.robot_url_r)
+
+        delta_x_l,delta_y_l,delta_z_l=self._process_robot_translate(camera_point_left,self.robot_l,self.camera_to_robot_left_base_matrix,self.robot_url_l)
 
 
-    def move_robot_to_picked_point_dual_arm(self, camera_point_left, camera_point_right):
+
+        input("Press enter to move both arms")
+
+        def move_robot_arm_to_pose(robot, delta_x,delta_y,delta_z):
+            robot.translate((delta_x, delta_y, delta_z), acceleration, velocity)
+
+        thread_r = threading.Thread(target=move_robot_arm_to_pose, args=(self.robot_r, delta_x_r,delta_y_r,delta_z_r))
+        thread_l = threading.Thread(target=move_robot_arm_to_pose, args=(self.robot_l, delta_x_l,delta_y_l,delta_z_l))
+
+        thread_r.start()
+        thread_l.start()
+
+        thread_r.join()
+        thread_l.join()
+
+        self.robot_r.set_tool_voltage(24)
+        self.robot_l.set_tool_voltage(24)
+        print('Done!!')
+
+
+
+
+    def move_robot_to_picked_point_dual_arm_servoc(self, camera_point_left, camera_point_right):
         acceleration = 0.2
         velocity = 0.05
 
@@ -822,8 +892,8 @@ if __name__=="__main__":
     parser.add_argument("--task_name",type=str,required=True)
     parser.add_argument("--version",type=int,default=0)
     parser.add_argument("--test_gripper",action="store_true")
-    parser.add_argument("--moving_height",type=float,default=0.2)
-    parser.add_argument("--place_height",type=float,default=0.05)
+    parser.add_argument("--moving_height",type=float,default=0.05)
+    parser.add_argument("--place_height",type=float,default=0.01)
     parser.add_argument("--model_name",type=str,default="gpt-4o")
     parser.add_argument("--manual",action="store_true")
     # parser.add_argument("--bimanual",action="store_true")
@@ -857,7 +927,7 @@ if __name__=="__main__":
     for step in range(steps_count):
         pipeline.set_step(step)
         print(f"start pre_execution for step {step}")
-        pipeline.pre_execution(crop_needed=True,crop_shape=(0,100,480,640))
+        pipeline.pre_execution(crop_needed=True,crop_shape=(0,100,480,580))
         print(f"pre_execution done")
         log=pipeline.load_info(info_name=f"log_{step}.json")  
 

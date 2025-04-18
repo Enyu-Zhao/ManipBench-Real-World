@@ -122,6 +122,15 @@ def visualize_point_cloud(rgb, depth, intrinsics, depth_scale):
     print('Last picked point position: ', last_picked_point)
     return last_picked_point
 
+
+
+def get_depth_value_at_coordinate(coordinate,depth_array_path):
+    depth_image=np.load(depth_array_path)
+
+    depth_value=depth_image[coordinate[1],coordinate[0]]
+
+    return depth_value/1000
+
 def move_robot_to_last_picked_point(camera_point):
     acceleration = 0.2
     velocity = 0.05

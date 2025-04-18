@@ -5,9 +5,9 @@
     1.2 Run the docker using: 
         ```sudo docker run -it --device /dev/tty1 --device /dev/input --privileged -v /etc/localtime:/etc/localtime:ro -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY --shm-size 8g --device /dev/tty1 --device /dev/input --device-cgroup-rule="c 81:* rmw" -e GDK_SCALE -e GDK_DPI_SCALE --network host  --ipc=host  -v /home/:/home --name {container_name} {image_id}```
 2. After opening the docker, 
-    2.1 roslaunch ur5_moveit_config robot_realsense.launch robot_ip:=192.10.0.12
+    2.1 `roslaunch ur5_moveit_config robot_realsense.launch robot_ip:=192.10.0.12`
         The above command launches the configuration for the right arm. Use the IP address of 192.10.0.11 for the left arm
-    2.2 roslaunch ur5_moveit_config moveit_rviz.launch config:=true
+    2.2 `roslaunch ur5_moveit_config moveit_rviz.launch config:=true`
     The above command will launch the RViz UI for the calibration.
 
 
